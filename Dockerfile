@@ -57,11 +57,13 @@ RUN buildDeps='curl gcc make autoconf libc-dev zlib1g-dev pkg-config' \
             php7.4-imagick \
             php7.4-mysql \
             php7.4-zip \
-            php7.4-pgsql \
+            # php7.4-pgsql \
             php7.4-intl \
             php7.4-xml \
             php-pear \
     && pecl -d php_suffix=7.4 install -o -f redis memcached \
+    && pecl install mongodb \
+    # && docker-php-ext-enable mongodb \
     && mkdir -p /run/php \
     && pip install wheel \
     && pip install supervisor supervisor-stdout \
@@ -83,16 +85,20 @@ RUN buildDeps='curl gcc make autoconf libc-dev zlib1g-dev pkg-config' \
     && sed -i -e "s/^;clear_env = no$/clear_env = no/" ${fpm_conf} \
     && echo "extension=redis.so" > /etc/php/7.4/mods-available/redis.ini \
     && echo "extension=memcached.so" > /etc/php/7.4/mods-available/memcached.ini \
+    && echo "extension=mongodb.so" > /etc/php/7.4/mods-available/mongodb.ini \
     && ln -sf /etc/php/7.4/mods-available/redis.ini /etc/php/7.4/fpm/conf.d/20-redis.ini \
     && ln -sf /etc/php/7.4/mods-available/redis.ini /etc/php/7.4/cli/conf.d/20-redis.ini \
     && ln -sf /etc/php/7.4/mods-available/memcached.ini /etc/php/7.4/fpm/conf.d/20-memcached.ini \
     && ln -sf /etc/php/7.4/mods-available/memcached.ini /etc/php/7.4/cli/conf.d/20-memcached.ini \
+    && ln -sf /etc/php/7.4/mods-available/mongodb.ini /etc/php/7.4/fpm/conf.d/20-mongodb.ini \
+    && ln -sf /etc/php/7.4/mods-available/mongodb.ini /etc/php/7.4/cli/conf.d/20-mongodb.ini \
     # Install Composer
     && curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
     && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
     && php -r "if (hash('SHA384', file_get_contents('/tmp/composer-setup.php')) !== trim(file_get_contents('/tmp/composer-setup.sig'))) { unlink('/tmp/composer-setup.php'); echo 'Invalid installer' . PHP_EOL; exit(1); }" \
     && php /tmp/composer-setup.php --no-ansi --install-dir=/usr/local/bin --filename=composer --version=${COMPOSER_VERSION} \
     && rm -rf /tmp/composer-setup.php \
+    && composer self-update \
     # Clean up
     && rm -rf /tmp/pear \
     && apt-get purge -y --auto-remove $buildDeps \
